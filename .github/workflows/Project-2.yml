@@ -1,0 +1,84 @@
+name: Project 2
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "Project 2/**"
+      - "!Project 2/README.md"
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "Project 2/**"
+      - "!Project 2/README.md"
+
+jobs:
+  build-scan-push:
+    name: Build, Scan, and Push Docker Image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Build Docker Image
+        working-directory: ./Project 2
+        run: docker build -t nfroze/project-2-secure-app:latest .
+
+      - name: Install Trivy for vulnerability scanning
+        run: |
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sudo sh -s -- -b /usr/local/bin
+
+      - name: Scan Docker Image with Trivy
+        run: trivy image --exit-code 1 --severity HIGH,CRITICAL nfroze/project-2-secure-app:latest
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_PASSWORD }}" | docker login --username ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+
+      - name: Tag Docker Image
+        run: docker tag nfroze/project-2-secure-app:latest ${{ secrets.DOCKERHUB_USERNAME }}/project-2-secure-app:latest
+
+      - name: Push Docker Image to Docker Hub
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/project-2-secure-app:latest
+
+  ecs-update:
+    name: Update ECS Service with New Docker Image
+    runs-on: ubuntu-latest
+    needs: build-scan-push
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Update ECS Service
+        run: |
+          aws ecs update-service --cluster Project-2-Container-Security --service Project-2-Container-Security --force-new-deployment
+
+  dast-scan:
+    name: Run DAST Scan on Deployed ECS Service
+    runs-on: ubuntu-latest
+    needs: ecs-update
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Wait for ECS Deployment to Stabilize
+        run: sleep 60
+
+      - name: Prepare ZAP Report Directory
+        run: |
+          mkdir -p $(pwd)/zap-report
+          chmod -R 777 $(pwd)/zap-report
+
+      - name: Run OWASP ZAP Full Scan
+        run: |
+          docker run --rm -v $(pwd)/zap-report:/zap/wrk ghcr.io/zaproxy/zaproxy:stable \
+            zap-full-scan.py -t "${{ secrets.ECS_SERVICE_URL }}" -r zap_report.html -I
