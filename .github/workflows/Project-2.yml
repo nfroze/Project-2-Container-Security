@@ -56,7 +56,7 @@ jobs:
 
       - name: Update ECS Service
         run: |
-          aws ecs update-service --cluster Project-2-Container-Security --service Project-2-Container-Security --force-new-deployment
+          aws ecs update-service --cluster Project-2-Container-Security --service Project-2-Image-Application-Security --force-new-deployment
 
   dast-scan:
     name: Run DAST Scan on Deployed ECS Service
