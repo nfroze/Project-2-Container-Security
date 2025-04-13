@@ -37,18 +37,25 @@ This project demonstrates how to **securely build, scan, and deploy** a containe
 
 ### 🔧 Job 1: Build, Scan & Push
 - Build the Docker image  
-- Scan with Trivy (block on HIGH/CRITICAL)  
+- Scan with Trivy (block on HIGH/CRITICAL findings)  
 - Push to Docker Hub  
 
 ### 🚀 Job 2: ECS Deployment
 - Use AWS credentials from GitHub Secrets  
-- Force new deployment on ECS cluster  
-- Rolling update with load balancing  
+- Force a new deployment on ECS cluster  
+- Rolling update triggered with each image change
+
+### 🧭 Static IP via Load Balancer
+To ensure a **static IP address** for both **end users** and the **OWASP ZAP scanner**, an **Application Load Balancer (ALB)** was configured in front of the ECS service.
+
+- ECS tasks are assigned dynamic IPs on deployment, which can break runtime scans.
+- The ALB provides a **consistent DNS name and IP** that routes requests to the current ECS task.
+- This is essential for reliable **DAST scans** and user access post-deployment.
 
 ### 🧪 Job 3: Runtime DAST Scan
-- Wait for app to stabilize  
-- Use OWASP ZAP container to scan live endpoint  
-- Generate vulnerability report (without failing the pipeline)
+- Wait for ECS to stabilize  
+- Use OWASP ZAP container to scan the app via the static Load Balancer IP  
+- Generate a vulnerability report (non-blocking for pipeline)
 
 ---
 
