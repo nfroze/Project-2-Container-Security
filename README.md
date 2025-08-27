@@ -1,79 +1,69 @@
-# 🐳 Project 2: Container Security
+# Project 2: Container Security
 
-## 1. Overview 🚀
-This project demonstrates how to **securely build, scan, and deploy** a containerized application using **Docker** and **Amazon ECS**, with dynamic security testing applied post-deployment. The CI/CD pipeline uses **Trivy** for vulnerability scanning and **OWASP ZAP** for DAST, helping catch both image-level and runtime threats.
+## Overview
 
----
+Docker containerisation and deployment to Amazon ECS. Container scanning with Trivy and runtime security testing with OWASP ZAP. CI/CD pipeline automates build, scan, deploy, and test stages.
 
-## 2. Key Technologies 🛠
-- **Docker** ⚙️  
-  - Containerizes the application and static content.
-- **Amazon ECS** ☁️  
-  - Orchestrates container deployment with rolling updates and auto-scaling.
-- **Trivy** 🔎  
-  - Performs container image vulnerability scans.
-- **OWASP ZAP** 🛡  
-  - Scans the live app for XSS, SQLi, and other runtime issues.
-- **GitHub Actions** 🤖  
-  - Automates image build, scan, deployment, and runtime testing in a single pipeline.
+## Technologies
 
----
+- Docker - Application containerisation
+- Amazon ECS - Container orchestration
+- Trivy - Container vulnerability scanning
+- OWASP ZAP - Dynamic application security testing
+- GitHub Actions - CI/CD automation
+- Application Load Balancer - Static endpoint for ECS service
 
-## 3. Security Highlights 🔒
-- **Trusted Base Images**  
-  - Official base images reduce inherited vulnerabilities.
-- **Automated Image Scanning**  
-  - Trivy blocks insecure containers from reaching production.
-- **DAST Integration**  
-  - OWASP ZAP scans the deployed app for runtime threats.
-- **Least Privilege IAM**  
-  - ECS roles are tightly scoped for better security.
-- **Zero-Downtime Deployment**  
-  - Rolling updates maintain uptime and enforce version control.
+## Implementation
 
----
+### CI/CD Workflow
 
-## 4. CI/CD Workflow 🔄
+#### Job 1: Build, Scan & Push
+- Build Docker image
+- Scan with Trivy (fails on HIGH/CRITICAL findings)
+- Push to Docker Hub
 
-### 🔧 Job 1: Build, Scan & Push
-- Build the Docker image  
-- Scan with Trivy (block on HIGH/CRITICAL findings)  
-- Push to Docker Hub  
+#### Job 2: ECS Deployment
+- AWS credentials from GitHub Secrets
+- Force new deployment on ECS cluster
+- Rolling update with new image
 
-### 🚀 Job 2: ECS Deployment
-- Use AWS credentials from GitHub Secrets  
-- Force a new deployment on ECS cluster  
-- Rolling update triggered with each image change
+#### Job 3: Runtime DAST
+- Wait for ECS stabilisation
+- OWASP ZAP scans application via load balancer
+- Generate vulnerability report
 
-### 🧭 Static IP via Load Balancer
-To ensure a **static IP address** for both **end users** and the **OWASP ZAP scanner**, an **Application Load Balancer (ALB)** was configured in front of the ECS service.
+### Load Balancer Configuration
 
-- ECS tasks are assigned dynamic IPs on deployment, which can break runtime scans.
-- The ALB provides a **consistent DNS name and IP** that routes requests to the current ECS task.
-- This is essential for reliable **DAST scans** and user access post-deployment.
+Application Load Balancer provides static endpoint for:
+- Consistent user access
+- OWASP ZAP scanning target
+- Routes traffic to dynamic ECS task IPs
 
-### 🧪 Job 3: Runtime DAST Scan
-- Wait for ECS to stabilize  
-- Use OWASP ZAP container to scan the app via the static Load Balancer IP  
-- Generate a vulnerability report (non-blocking for pipeline)
+## Security Features
 
----
+- Base image vulnerability scanning
+- Container security scanning before deployment
+- Runtime security testing post-deployment
+- IAM roles with least privilege for ECS
+- Rolling deployments maintain availability
 
-## 5. Value for Organizations 💼
-- **Secure CI/CD Delivery**  
-  - Integrated static + dynamic scanning pre- and post-deployment
-- **Fast, Automated Workflows**  
-  - Secure code goes live faster and with less human error
-- **Cloud-Native Scalability**  
-  - ECS ensures resilience, availability, and auto-scaling
-- **Real-World Threat Coverage**  
-  - Combines vulnerability scanning and runtime testing in one flow
+## Project Structure
 
----
+```
+Project-2-Container-Security/
+├── Dockerfile           # Container definition
+├── .github/
+│   └── workflows/
+│       └── pipeline.yml # CI/CD configuration
+├── terraform/
+│   └── ecs.tf          # ECS infrastructure
+└── app/                # Application code
+```
 
-## 6. Conclusion ✅
-This project integrates **Docker**, **Trivy**, **OWASP ZAP**, **ECS**, and **GitHub Actions** into a modern DevSecOps pipeline. It enforces security from image build to live deployment — automatically. This ensures a fast, secure release cycle and aligns with real-world security practices.
+## AWS Resources
 
----
-
-🔗 [Back to my GitHub Profile](https://github.com/nfroze)
+- ECS cluster and service
+- Task definitions
+- Application Load Balancer
+- Security groups
+- IAM roles and policies
